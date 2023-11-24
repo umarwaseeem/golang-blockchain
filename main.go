@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
+	"strconv"
 )
 
 // Block represents a block in the blockchain
@@ -11,6 +12,7 @@ type Block struct {
 	PrevBlock    *Block      // Pointer to the previous block
 	NextBlock    *Block      // Pointer to the next block
 	Root         *MerkleNode // Merkle root of the transactions in the block
+	Nonce        int
 }
 
 type MerkleNode struct {
@@ -62,10 +64,36 @@ func NewBlock(transactions []string, prevBlock *Block) *Block {
 		PrevBlock:    prevBlock,
 		NextBlock:    nil,
 		Root:         nil,
+		Nonce:        0,
 	}
 
 	block.Root = buildMerkleTree(block.Transactions)
+	block.MineBlock()
 	return block
+}
+
+func calculateHashWithNonce(data []string, nonce int) string {
+	combinedData := ""
+	for _, d := range data {
+		combinedData += d
+	}
+	combinedData += strconv.Itoa(nonce)
+	hash := sha256.Sum256([]byte(combinedData))
+	return fmt.Sprintf("%x", hash)
+}
+
+func (b *Block) MineBlock() {
+	targetPrefix := "0000" // Define the target prefix for the hash
+	for {
+		hash := calculateHashWithNonce(b.Transactions, b.Nonce)
+		if hash[:len(targetPrefix)] == targetPrefix {
+			// Valid nonce found
+			fmt.Printf("Block mined! Nonce: %d, Hash: %s\n", b.Nonce, hash)
+			break
+		}
+		// Increment nonce and try again
+		b.Nonce++
+	}
 }
 
 // PrintBlockchain prints the content of the blockchain
@@ -73,6 +101,7 @@ func (bc *Blockchain) PrintBlockchain() {
 	currentBlock := bc.Head
 	for currentBlock != nil {
 		fmt.Printf("Transactions: %v\n", currentBlock.Transactions)
+		fmt.Printf("Nonce: %v\n", currentBlock.Nonce)
 		// fmt.Printf("Merkle Tree:\n")
 		printTree(currentBlock.Root, "")
 		currentBlock = currentBlock.NextBlock
