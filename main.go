@@ -2,120 +2,96 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"go-blockchain/utils"
 )
 
+// Block represents a block in the blockchain
+type Block struct {
+	Transactions []string
+	PrevBlock    *Block      // Pointer to the previous block
+	NextBlock    *Block      // Pointer to the next block
+	Root         *MerkleNode // Merkle root of the transactions in the block
+}
+
 type MerkleNode struct {
-	Data  string
-	Hash  string
-	Left  *MerkleNode
-	Right *MerkleNode
+	Hashes []string
+	Left   *MerkleNode
+	Right  *MerkleNode
 }
 
-func NewMerkleNode(data string) *MerkleNode {
-	return &MerkleNode{
-		Data: data,
-		Hash: calculateHash(data),
+func calculateHash(data []string) string {
+	combinedData := ""
+	for _, d := range data {
+		combinedData += d
 	}
-}
-
-func calculateHash(data string) string {
-	hash := sha256.New()
-	hash.Write([]byte(data))
-	return hex.EncodeToString(hash.Sum(nil))
+	hash := sha256.Sum256([]byte(combinedData))
+	return fmt.Sprintf("%x", hash)
 }
 
 func buildMerkleTree(data []string) *MerkleNode {
-	if len(data) == 0 {
-		return nil
-	}
 	if len(data) == 1 {
-		return NewMerkleNode(data[0])
+		return &MerkleNode{Hashes: data, Left: nil, Right: nil}
 	}
-
-	// Create a new node with the combined hash of two child nodes
 	mid := len(data) / 2
 	left := buildMerkleTree(data[:mid])
 	right := buildMerkleTree(data[mid:])
-	return NewMerkleNode(left.Hash + right.Hash)
+	return &MerkleNode{Hashes: []string{calculateHash(data)}, Left: left, Right: right}
 }
 
-type Block struct {
-	transaction string
-	nonce       int
-	merkleRoot  *MerkleNode
-	prevBlock   *Block
+func printTree(node *MerkleNode, indent string) {
+	if node != nil {
+		fmt.Println(indent+"Hash:", node.Hashes)
+	}
+	if node.Left != nil {
+		printTree(node.Left, indent+"  ")
+	}
+	if node.Right != nil {
+		printTree(node.Right, indent+"  ")
+	}
 }
 
-// 10 marks
-func createNewBlock() {
-
+// Blockchain represents a linked list of blocks
+type Blockchain struct {
+	Head *Block // Head of the blockchain (genesis block)
 }
 
-// 40 marks
-// All the transactions of each block are arranged in a Merkel Tree
-func createMerkleTree() {
-
-}
-
-// 20 marks
-// A method to find the nonce value for the block. The target shall be adjustable as the number
-// of trailing zeros in the 256-bit output string.
-func mineBlock() {
-
-}
-
-// no marks
-func displayBlocks() {
-
-}
-
-// no marks
-func displayMerkleTree(node *MerkleNode, level int) {
-	if node == nil {
-		return
+// NewBlock creates a new block with the given transactions and links it to the previous block
+func NewBlock(transactions []string, prevBlock *Block) *Block {
+	block := &Block{
+		Transactions: transactions,
+		PrevBlock:    prevBlock,
+		NextBlock:    nil,
+		Root:         nil,
 	}
 
-	// Print the current node's hash and data at the given level
-	fmt.Printf("%s Level %d: %s\n Reset Hash=%s,\n Data=%s\n", utils.Blue, level, utils.Reset, node.Hash, node.Data)
-
-	// Recursively display the left and right subtrees
-	displayMerkleTree(node.Left, level+1)
-	displayMerkleTree(node.Right, level+1)
+	block.Root = buildMerkleTree(block.Transactions)
+	return block
 }
 
-// 20 marks
-// Functionality to verify a block and the chain. The verification will consider the changes to the transactions stored in the
-// Merkel tree
-func verifyBlock() {
-
+// PrintBlockchain prints the content of the blockchain
+func (bc *Blockchain) PrintBlockchain() {
+	currentBlock := bc.Head
+	for currentBlock != nil {
+		fmt.Printf("Transactions: %v\n", currentBlock.Transactions)
+		// fmt.Printf("Merkle Tree:\n")
+		printTree(currentBlock.Root, "")
+		currentBlock = currentBlock.NextBlock
+	}
 }
-
-func verifyChain() {
-
-}
-
-// no marks
-// Function to change one or multiple transactions of the given block ref.
-func changeBlock() {
-
-}
-
-// 10 marks
-// func calculateHash() {
-
-// }
 
 func main() {
-	data := []string{"Transaction1", "Transaction2", "Transaction3", "Transaction4"}
+	// Create a new blockchain with the genesis block
+	genesisBlock := NewBlock([]string{"Genesis Transaction1", "Genesis Transaction2", "Genesis Transaction3"}, nil)
+	blockchain := &Blockchain{Head: genesisBlock}
 
-	// Build the Merkle tree
-	merkleTree := buildMerkleTree(data)
+	// Add new blocks to the blockchain
+	block2 := NewBlock([]string{"Second Transaction1", "Second Transaction2", "Second Transaction3"}, genesisBlock)
+	genesisBlock.NextBlock = block2
 
-	// Print the root hash of the Merkle tree
-	fmt.Println("Merkle Root Hash:", merkleTree.Hash)
+	block3 := NewBlock([]string{"Third Transaction1", "Third Transaction2", "Third Transaction3"}, block2)
+	block2.NextBlock = block3
 
-	displayMerkleTree(merkleTree, 0)
+	// Print the content of the blockchain
+	fmt.Println("Blockchain:")
+	blockchain.PrintBlockchain()
 }
