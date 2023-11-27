@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"fmt"
+	"go-blockchain/utils"
 	"strconv"
 	"strings"
 )
@@ -142,7 +143,7 @@ func (b *Block) VerifyBlock() bool {
 
 	}
 	fmt.Println("Current hash:   " + b.Blockhash)
-	fmt.Printf(hashString)
+	fmt.Println(hashString)
 	return false
 }
 
@@ -151,17 +152,16 @@ func (blockchain *Blockchain) VerifyChain() {
 	index := 0
 
 	for currentBlock != nil {
-		fmt.Printf("Verifying Block #%d:\n", index)
+		fmt.Printf("%sVerifying Block #%d:\n%s", utils.Cyan, index, utils.Reset)
 		var verification = currentBlock.VerifyBlock()
-		if verification == false {
+		if !verification {
 			fmt.Println("The block number " + strconv.Itoa(index) + " seems to be tampered and can't be verified")
 			return
 		}
-		fmt.Println("------------------------")
+		fmt.Printf("%s------------------------%s", utils.Cyan, utils.Reset)
 		index++
 		currentBlock = currentBlock.NextBlock
 	}
-	return
 }
 
 func (b *Block) MineBlock() {
@@ -236,9 +236,28 @@ func AskInput(prompt string, r *bufio.Reader) (string, error) {
 	return strings.TrimSpace(input), err
 }
 
+var bootstrapNodePort = 8080
+var currentPort = 8080
+var localIP = GetLocalIP()
+
 func main() {
 
-	// reader := bufio.NewReader(os.Stdin)
+	node1, node2, node3, node4 := newPeerNode(), newPeerNode(), newPeerNode(), newPeerNode()
+	node5 := newPeerNode()
+
+	bootstrapNode := Node{
+		IPAddress:   localIP.String(),
+		Port:        bootstrapNodePort,
+		transaction: "",
+		Neighbours:  []Node{node1, node2, node3, node4},
+	}
+
+	displayNetwork(bootstrapNode)
+
+	addNeighbourToNode(&bootstrapNode, node5)
+	fmt.Printf("%sAfter adding a new node: %s \n", utils.Cyan, utils.Reset)
+	displayNetwork(bootstrapNode)
+
 	var input string
 	var input1 string
 	genesisBlock := NewBlock([]string{"Genesis Transaction1", "Genesis Transaction2", "Genesis Transaction3"}, nil)
