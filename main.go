@@ -5,6 +5,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"go-blockchain/utils"
+	"log"
+	"math/rand"
+	"net"
 	"strconv"
 	"strings"
 )
@@ -23,6 +26,22 @@ type MerkleNode struct {
 	Hashes []string
 	Left   *MerkleNode
 	Right  *MerkleNode
+}
+
+type Node struct {
+	IPAddress   string
+	Port        int
+	Neighbours  []Node
+	transaction string // transaction data - received from other nodes or the one to be sent
+	// make a function to send the transaction data to the other nodes
+}
+
+func (node *Node) FloodTransaction() {
+	// send the transaction data to all the neighbours
+}
+
+func (node *Node) ReceiveTransaction() {
+	// receive the transaction data from other nodes
 }
 
 func calculateHash(data []string) string {
@@ -234,6 +253,53 @@ func AskInput(prompt string, r *bufio.Reader) (string, error) {
 	input, err := r.ReadString('\n')
 
 	return strings.TrimSpace(input), err
+}
+
+func newPeerNode() Node {
+	currentPort++
+	newNode := Node{
+		IPAddress:   localIP.String(),
+		Port:        currentPort,
+		transaction: "",
+		Neighbours:  []Node{},
+	}
+	return newNode
+}
+
+func addNeighbourToNode(node *Node, neighbour Node) {
+	node.Neighbours = append(node.Neighbours, neighbour)
+	fmt.Printf("\n%sA New Node %v:%v added as neighbour of Node %v:%v\n\n%s", utils.Green, neighbour.IPAddress, neighbour.Port, node.IPAddress, node.Port, utils.Reset)
+	// randomly add the node as a neighbour to one of the neighbours of the node and vice versa
+	randomIndex := rand.Intn(len(node.Neighbours) - 1)
+	node.Neighbours[randomIndex].Neighbours = append(node.Neighbours[randomIndex].Neighbours, neighbour)
+	neighbour.Neighbours = append(neighbour.Neighbours, node.Neighbours[randomIndex])
+	fmt.Printf("\n%sOld Node %v:%v added as neighbour of New Node %v:%v\n\n%s", utils.Green, neighbour.IPAddress, neighbour.Port, node.Neighbours[randomIndex].IPAddress, node.Neighbours[randomIndex].Port, utils.Reset)
+}
+
+func displayNetwork(bootstrapNode Node) {
+	fmt.Printf("\nBootstrap Node: %v:%v\n\n", bootstrapNode.IPAddress, bootstrapNode.Port)
+	// loop through all neighbours
+	for index, neighbour := range bootstrapNode.Neighbours {
+		fmt.Printf("Neighbour %d: %v:%v\n", index+1, neighbour.IPAddress, neighbour.Port)
+		// loop through all neighbours of the neighbour
+		for index2, neighbour2 := range neighbour.Neighbours {
+			fmt.Printf("  Neighbour %d: %v:%v\n", index2+1, neighbour2.IPAddress, neighbour2.Port)
+		}
+	}
+	fmt.Println()
+}
+
+func GetLocalIP() net.IP {
+	// udp connection to google dns
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	// after connection done, we get the local ip to which the socket is bound
+	return localAddr.IP
 }
 
 var bootstrapNodePort = 8080
