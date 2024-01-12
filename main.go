@@ -218,7 +218,7 @@ func (blockchain *Blockchain) VerifyChain() {
 		fmt.Printf("Verifying Block #%d:\n", index)
 		var verification = currentBlock.VerifyBlock()
 		if verification == false {
-			fmt.Println("The block number " + strconv.Itoa(index) + " seems to be tampered and can't be verified")
+			fmt.Println("\nThe block number " + strconv.Itoa(index) + " seems to be tampered and can't be verified")
 			return
 		}
 		fmt.Println("------------------------")
@@ -705,6 +705,16 @@ func main() {
 			blockchain.PrintBlockchain()
 		case "3":
 			fmt.Print("Enter block index to verify: ")
+			fmt.Scanln(&input1)
+			blocknumber, err := strconv.Atoi(input1)
+			if err != nil {
+				fmt.Println("Invalid input for block number. Please enter a valid integer.")
+				continue
+			}
+			fmt.Print("Verifying Block: ")
+			blockchain.printBlock(blocknumber)
+			blockchain.Head.VerifyBlock()
+
 		case "4":
 			blockchain.VerifyChain()
 		case "5":
